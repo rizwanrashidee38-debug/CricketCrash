@@ -1,6 +1,6 @@
 
         
-        <!DOCTYPE html>
+           <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -35,6 +35,14 @@
         
         <div id="setup">
             <input type="text" id="pName" placeholder="Your Surname"><br>
+            <select id="pTeamSelect">
+                <option value="Nagpur Nightriders">Nagpur Nightriders</option>
+                <option value="Butibori Blasters">Butibori Blasters</option>
+                <option value="Wardha Warriors">Wardha Warriors</option>
+                <option value="Hingna Hurricanes">Hingna Hurricanes</option>
+                <option value="Umred United">Umred United</option>
+                <option value="Kamptee Knights">Kamptee Knights</option>
+            </select>
             <select id="pRole">
                 <option value="Batsman">Specialist Batsman</option>
                 <option value="Bowler">Specialist Bowler</option>
@@ -100,7 +108,7 @@
 </div>
 
 <script>
-    let career = { name: "", role: "", pos: 1, div: 3, runs: 0, wicks: 0, matches: 0 };
+    let career = { name: "", role: "", pos: 1, div: 3, runs: 0, wicks: 0, matches: 0, myTeam: "" };
     let match = {
         innings: 1, teamRuns: 0, teamWicks: 0, totalBalls: 0,
         playerRuns: 0, playerBalls: 0, playerWicks: 0, playerOvers: 0,
@@ -109,7 +117,7 @@
     };
 
     let teams = [
-        { name: "Nagpur Nightriders (You)", points: 0, played: 0 },
+        { name: "Nagpur Nightriders", points: 0, played: 0 },
         { name: "Butibori Blasters", points: 0, played: 0 },
         { name: "Wardha Warriors", points: 0, played: 0 },
         { name: "Hingna Hurricanes", points: 0, played: 0 },
@@ -124,7 +132,12 @@
         career.name = document.getElementById('pName').value || "Player";
         career.role = document.getElementById('pRole').value;
         career.pos = parseInt(document.getElementById('pPos').value);
+        career.myTeam = document.getElementById('pTeamSelect').value;
         
+        // Label the user's chosen team in the array object dynamically
+        let userTeamObj = teams.find(t => t.name === career.myTeam);
+        if(userTeamObj) userTeamObj.name += " (You)";
+
         generateFixtures();
         
         document.getElementById('setup').classList.add('hidden');
@@ -138,10 +151,12 @@
     }
 
     function generateFixtures() {
-        let pool = ["Butibori Blasters", "Wardha Warriors", "Hingna Hurricanes", "Umred United", "Kamptee Knights"];
+        // Collect all opposing teams
+        let opponents = teams.filter(t => !t.name.includes(career.myTeam)).map(t => t.name.replace(" (You)", ""));
+        
         for (let i = 0; i < 2; i++) {
-            pool.sort(() => Math.random() - 0.5);
-            pool.forEach(opp => schedule.push(opp));
+            opponents.sort(() => Math.random() - 0.5);
+            opponents.forEach(opp => schedule.push(opp));
         }
     }
 
@@ -195,19 +210,16 @@
 
         let currentOverIndex = Math.floor(match.totalBalls / 6);
 
-        // 1. BATTING PAVILION SIMULATION
         if(match.isBatting && !match.playerActive) {
             simulateTeamBall();
             return;
         }
 
-        // 2. FIELDING FOR PURE BATSMAN
         if(!match.isBatting && career.role === "Batsman") {
             simulateOpponentBall();
             return;
         }
 
-        // 3. ALTERNATE BOWLING SPELL LOGIC
         if(!match.isBatting && career.role !== "Batsman") {
             if(match.playerOvers >= 24) {
                 addLog("You have finished your maximum quota of 4 overs.");
@@ -216,7 +228,6 @@
                 return;
             }
 
-            // Check if player just bowled the immediate previous over
             if(match.lastBowledOver !== -1 && currentOverIndex === (match.lastBowledOver + 1)) {
                 if(!match.consecutiveOversBlocked) {
                     addLog(`The captain changes ends. An alternate bowler takes Over ${currentOverIndex + 1}.`);
@@ -229,7 +240,6 @@
             }
         }
 
-        // 4. ACTIVE GAMEPLAY (Player facing/bowling the delivery)
         const res = outcomes[Math.floor(Math.random() * outcomes.length)];
         match.totalBalls++;
         
@@ -247,7 +257,6 @@
                 addLog(`You hit it for ${res} run(s).`);
             }
         } else {
-            // Active Bowling
             match.playerOvers++;
             if(res === "W") {
                 match.playerWicks++;
@@ -258,7 +267,6 @@
                 addLog(`Batsman scores ${res} off your delivery.`);
             }
 
-            // If an over finishes right now, save the index so player rests next over
             if(match.totalBalls % 6 === 0) {
                 match.lastBowledOver = Math.floor((match.totalBalls - 1) / 6);
                 addLog(`End of your over. Alternate bowler warming up.`);
@@ -269,12 +277,24 @@
         if(match.totalBalls >= 120 || match.teamWicks >= 10) nextInnings();
     }
 
+    // Realistic simulation step with dynamic acceleration
+    function getSimulatedRuns() {
+        let currentOver = Math.floor(match.totalBalls / 6);
+        let wicketsInHand = 10 - match.teamWicks;
+        
+        // Death Overs AI: Acceleration if wickets are remaining in the last 5 overs
+        if (currentOver >= 15 && wicketsInHand >= 6) {
+            return Math.floor(Math.random() * 4) + 1; // 1 to 4 runs per ball avg (higher explosion risk)
+        }
+        return Math.floor(Math.random() * 2); // Stable standard accumulation
+    }
+
     function simulateTeamBall() {
         let ballsThisOver = Math.floor(Math.random() * 4) + 3;
         for(let i = 0; i < ballsThisOver; i++) {
             if(match.totalBalls >= 120 || match.teamWicks >= (career.pos - 1)) break;
             match.totalBalls++;
-            match.teamRuns += Math.floor(Math.random() * 2);
+            match.teamRuns += getSimulatedRuns();
             if(Math.random() > 0.94) match.teamWicks++;
         }
         checkBattingEntry();
@@ -283,8 +303,19 @@
     }
 
     function simulateOpponentBall() {
+        let currentOver = Math.floor(match.totalBalls / 6);
+        let wicketsInHand = 10 - match.teamWicks;
+        let runsToAdd = 0;
+
+        // Death Overs run calibration for background simulation blocks
+        if (currentOver >= 15 && wicketsInHand >= 6) {
+            runsToAdd = Math.floor(Math.random() * 14) + 8; // High explosion scoring at the death
+        } else {
+            runsToAdd = Math.floor(Math.random() * 8);
+        }
+
         match.totalBalls += 6; 
-        match.teamRuns += Math.floor(Math.random() * 8);
+        match.teamRuns += runsToAdd;
         if(Math.random() > 0.88) match.teamWicks++;
         addLog("Overs processing. Your teammates are rotating the spell.");
         updateUI();
@@ -292,11 +323,10 @@
     }
 
     function simulateOpponentOver() {
-        // Simulates exactly 1 full over (6 balls) for your teammate from the other end
         for(let i = 0; i < 6; i++) {
             if(match.totalBalls >= 120 || match.teamWicks >= 10) break;
             match.totalBalls++;
-            match.teamRuns += Math.floor(Math.random() * 2);
+            match.teamRuns += getSimulatedRuns();
             if(Math.random() > 0.95) match.teamWicks++;
         }
         addLog(`Teammate finishes their over. Captain calls you back into the spell attack.`);
@@ -318,7 +348,7 @@
         while(match.totalBalls < 120 && match.teamWicks < 10) {
             match.totalBalls++;
             if(Math.random() > 0.96) match.teamWicks++;
-            match.teamRuns += Math.floor(Math.random() * 2);
+            match.teamRuns += getSimulatedRuns();
         }
         nextInnings();
     }
@@ -346,16 +376,21 @@
             else win = match.teamRuns < match.target;
         }
 
+        // Properly allocate points to whichever team won this matchup
+        let userTeamNameInTable = career.myTeam + " (You)";
         if(win) {
-            teams.points += 2;
-            addLog(`Victory! Nagpur Nightriders secure 2 points.`);
+            let userTeamObj = teams.find(t => t.name === userTeamNameInTable);
+            if(userTeamObj) userTeamObj.points += 2;
+            addLog(`Victory! ${career.myTeam} secure 2 points.`);
         } else {
             let oppIndex = teams.findIndex(t => t.name === match.opponent);
             if(oppIndex !== -1) teams[oppIndex].points += 2;
             addLog(`Defeat. ${match.opponent} takes the points.`);
         }
         
-        teams.played++;
+        let uTeam = teams.find(t => t.name === userTeamNameInTable);
+        if(uTeam) uTeam.played++;
+        
         let oppIdx = teams.findIndex(t => t.name === match.opponent);
         if(oppIdx !== -1) teams[oppIdx].played++;
 
@@ -373,8 +408,9 @@
     }
 
     function simulateRestOfLeague() {
-        for(let i=1; i<teams.length; i++) {
-            if(teams[i].name !== match.opponent && Math.random() > 0.4) {
+        let userTeamNameInTable = career.myTeam + " (You)";
+        for(let i=0; i<teams.length; i++) {
+            if(teams[i].name !== match.opponent && teams[i].name !== userTeamNameInTable && Math.random() > 0.4) {
                 teams[i].points += 2;
             }
             if(teams[i].played < career.matches) teams[i].played = career.matches;
@@ -395,7 +431,16 @@
         }
         
         career.matches = 0; career.runs = 0; career.wicks = 0;
-        teams.forEach(t => { t.points = 0; t.played = 0; });
+        
+        // Strip out previous custom tag markers and reset scores for fresh season iteration
+        teams.forEach(t => { 
+            t.points = 0; t.played = 0; 
+            t.name = t.name.replace(" (You)", "");
+        });
+        
+        let freshUserObj = teams.find(t => t.name === career.myTeam);
+        if(freshUserObj) freshUserObj.name += " (You)";
+
         generateFixtures();
         prepMatchday();
     }
@@ -416,7 +461,7 @@
         
         document.getElementById('match-header').innerText = `vs ${match.opponent || 'TBD'}`;
         document.getElementById('sc-overs').innerText = `Innings ${match.innings} | Overs: ${ov}.${bl} / 20.0`;
-        document.getElementById('batting-team').innerText = match.isBatting ? "NAGPUR NIGHTRIDERS BATTING" : `${(match.opponent || '').toUpperCase()} BATTING`;
+        document.getElementById('batting-team').innerText = match.isBatting ? `${career.myTeam.toUpperCase()} BATTING` : `${(match.opponent || '').toUpperCase()} BATTING`;
         
         let status = "";
         if(match.isBatting) {
@@ -444,3 +489,6 @@
 </script>
 </body>
 </html>
+             
+                
+                

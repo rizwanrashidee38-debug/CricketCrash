@@ -1,4 +1,5 @@
-<!DOCTYPE html>
+                                             
+        <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -204,6 +205,7 @@
     function playBall() {
         if(!match.matchActive) return;
 
+        // Immediate run chase validation check
         if(match.innings === 2 && match.teamRuns >= match.target) {
             nextInnings();
             return;
@@ -316,13 +318,15 @@
         let ballsThisOver = Math.floor(Math.random() * 4) + 3;
         for(let i = 0; i < ballsThisOver; i++) {
             if(match.totalBalls >= 120 || match.teamWicks >= (career.pos - 1)) break;
+            if(match.innings === 2 && match.teamRuns >= match.target) break; // Safeguard run-chase boundaries
             match.totalBalls++;
             match.teamRuns += getSimulatedRuns();
             if(Math.random() > 0.95) match.teamWicks++;
         }
         checkBattingEntry();
         updateUI();
-        if(match.totalBalls >= 120) nextInnings();
+        if(match.innings === 2 && match.teamRuns >= match.target) { nextInnings(); return; }
+        if(match.totalBalls >= 120 || match.teamWicks >= 10) nextInnings();
     }
 
     function simulateOpponentBall() {
@@ -334,7 +338,10 @@
         let totalRunsThisOver = 0;
         for(let b=0; b<6; b++) {
             if(match.totalBalls >= 120 || match.teamWicks >= 10) break;
-            totalRunsThisOver += getSimulatedRuns();
+            if(match.innings === 2 && match.teamRuns >= match.target) break;
+            let deliveryRuns = getSimulatedRuns();
+            totalRunsThisOver += deliveryRuns;
+            match.teamRuns += deliveryRuns;
             match.totalBalls++;
             if(Math.random() > 0.94) match.teamWicks++;
         }

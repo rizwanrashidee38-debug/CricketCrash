@@ -1,63 +1,79 @@
 
         
-                            
+                  <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>3rd Division Cricket League Simulator</title>
+    <style>
+        /* All CSS styles go inside here */
+    </style>
+</head>
+<body>
+
+    <div class="game-wrap">
+        </div>
+
+    <script>
+        // All variables, functions, and the endMatch() function 
+        // must sit safely inside these two script markers.
+
+        function endMatch() {
+            career.matches++;
+            career.runs += match.playerRuns;
+            career.wicks += match.playerWicks; 
+
+            let win = false;
+            if(match.innings === 2) {
+                if(match.isBatting) win = match.teamRuns >= match.target;
+                else win = match.teamRuns < match.target;
+            } else {
+                if(match.isBatting) win = match.teamRuns >= match.target;
+                else win = match.teamRuns < match.target;
+            }
+
+            let userTeamNameInTable = career.myTeam;
+            let userTeamObj = teams.find(t => t.name.includes(userTeamNameInTable) || t.name === userTeamNameInTable);
+            
+            if(win) {
+                if(userTeamObj) userTeamObj.points += 2;
+                addLog(`Victory! ${career.myTeam} secure 2 league points.`);
+            } else {
+                let oppIndex = teams.findIndex(t => t.name === match.opponent);
+                if(oppIndex !== -1) teams[oppIndex].points += 2;
+                addLog(`Defeat. ${match.opponent} takes the points.`);
+            }
+            
+            if(userTeamObj) userTeamObj.played++;
+            
+            let oppIdx = teams.findIndex(t => t.name === match.opponent);
+            if(oppIdx !== -1) teams[oppIdx].played++;
+
+            simulateRestOfLeague();
+
+            alert(`Match Concluded!\nYou scored ${match.playerRuns} runs and took ${match.playerWicks} wickets.`);
+            
+            match.playerRuns = 0;
+            match.playerBalls = 0;
+            match.playerWicks = 0;
+            match.playerOvers = 0;
+
+            if(career.matches >= 10) {
+                checkSeasonOutcome();
+            } else {
+                match.matchActive = false;
+                prepMatchday();
+            }
+            updateUI();
+        }
+
+        // Rest of the game logic functions (playBall, updateUI, etc)...
+
+    </script>
+</body>
+</html>
+          
                                    
-                 function endMatch() {
-    career.matches++;
-    
-    // --- BUG FIX: SECURE ACCURATE STATS DATA ROUTING ---
-    // Instantly add the match stats directly to your permanent career tally
-    career.runs += match.playerRuns;
-    career.wicks += match.playerWicks; 
+                 
 
-    let win = false;
-    if(match.innings === 2) {
-        if(match.isBatting) win = match.teamRuns >= match.target;
-        else win = match.teamRuns < match.target;
-    } else {
-        // If the match ended naturally at the end of Innings 1 (e.g., target was already crossed)
-        if(match.isBatting) win = match.teamRuns >= match.target;
-        else win = match.teamRuns < match.target;
-    }
-
-    // Allocate League Points safely
-    let userTeamNameInTable = career.myTeam;
-    // Check if the name in the array contains the "(You)" suffix to match it perfectly
-    let userTeamObj = teams.find(t => t.name.includes(userTeamNameInTable) || t.name === userTeamNameInTable);
     
-    if(win) {
-        if(userTeamObj) userTeamObj.points += 2;
-        addLog(`Victory! ${career.myTeam} secure 2 league points.`);
-    } else {
-        let oppIndex = teams.findIndex(t => t.name === match.opponent);
-        if(oppIndex !== -1) teams[oppIndex].points += 2;
-        addLog(`Defeat. ${match.opponent} takes the points.`);
-    }
-    
-    if(userTeamObj) userTeamObj.played++;
-    
-    let oppIdx = teams.findIndex(t => t.name === match.opponent);
-    if(oppIdx !== -1) teams[oppIdx].played++;
-
-    // Process remainder of the league matches behind the scenes
-    simulateRestOfLeague();
-
-    alert(`Match Concluded!\nYou scored ${match.playerRuns} runs and took ${match.playerWicks} wickets.`);
-    
-    // Clear the active match variables completely so they don't leak into the next game
-    match.playerRuns = 0;
-    match.playerBalls = 0;
-    match.playerWicks = 0;
-    match.playerOvers = 0;
-
-    if(career.matches >= 10) {
-        checkSeasonOutcome();
-    } else {
-        match.matchActive = false;
-        prepMatchday();
-    }
-    updateUI();
-}
-   
-    
- 

@@ -1,6 +1,7 @@
 
         
-           <!DOCTYPE html>
+                            
+                       <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -134,7 +135,6 @@
         career.pos = parseInt(document.getElementById('pPos').value);
         career.myTeam = document.getElementById('pTeamSelect').value;
         
-        // Label the user's chosen team in the array object dynamically
         let userTeamObj = teams.find(t => t.name === career.myTeam);
         if(userTeamObj) userTeamObj.name += " (You)";
 
@@ -151,9 +151,7 @@
     }
 
     function generateFixtures() {
-        // Collect all opposing teams
         let opponents = teams.filter(t => !t.name.includes(career.myTeam)).map(t => t.name.replace(" (You)", ""));
-        
         for (let i = 0; i < 2; i++) {
             opponents.sort(() => Math.random() - 0.5);
             opponents.forEach(opp => schedule.push(opp));
@@ -208,6 +206,11 @@
     function playBall() {
         if(!match.matchActive) return;
 
+        if(match.innings === 2 && match.teamRuns >= match.target) {
+            nextInnings();
+            return;
+        }
+
         let currentOverIndex = Math.floor(match.totalBalls / 6);
 
         if(match.isBatting && !match.playerActive) {
@@ -247,7 +250,7 @@
             match.playerBalls++;
             if(res === "W") {
                 match.teamWicks++;
-                addLog(`<span style="color:red">WICKET! You are OUT for ${match.playerRuns} runs.</span>`);
+                addLog(`<span style="color:red">WICKET! You are OUT caught for ${match.playerRuns} runs.</span>`);
                 match.playerActive = false;
                 document.getElementById('tiles').classList.add('hidden');
                 document.getElementById('sim-btn').classList.remove('hidden');
@@ -257,9 +260,10 @@
                 addLog(`You hit it for ${res} run(s).`);
             }
         } else {
+            // Active Player Bowling
             match.playerOvers++;
             if(res === "W") {
-                match.playerWicks++;
+                match.playerWicks++; // FIXED: Correctly records to player stat pool
                 match.teamWicks++;
                 addLog(`<span style="color:#4caf50">WICKET! Beautiful length delivery clean bowls the batsman!</span>`);
             } else {
@@ -270,23 +274,50 @@
             if(match.totalBalls % 6 === 0) {
                 match.lastBowledOver = Math.floor((match.totalBalls - 1) / 6);
                 addLog(`End of your over. Alternate bowler warming up.`);
+                
+                if(match.playerOvers >= 24) {
+                    addLog("Your 4-over bowling quota is complete. You return to the outfield.");
+                    document.getElementById('tiles').classList.add('hidden');
+                    document.getElementById('sim-btn').classList.remove('hidden');
+                }
             }
         }
 
         updateUI();
+        if(match.innings === 2 && match.teamRuns >= match.target) {
+            nextInnings();
+            return;
+        }
         if(match.totalBalls >= 120 || match.teamWicks >= 10) nextInnings();
     }
 
-    // Realistic simulation step with dynamic acceleration
+    // Dynamic High-Octane T20 Run Engine AI
     function getSimulatedRuns() {
         let currentOver = Math.floor(match.totalBalls / 6);
         let wicketsInHand = 10 - match.teamWicks;
         
-        // Death Overs AI: Acceleration if wickets are remaining in the last 5 overs
-        if (currentOver >= 15 && wicketsInHand >= 6) {
-            return Math.floor(Math.random() * 4) + 1; // 1 to 4 runs per ball avg (higher explosion risk)
+        // 1. Death Overs Blitz (Overs 15-20) with strong resources
+        if (currentOver >= 15 && wicketsInHand >= 5) {
+            let roll = Math.random();
+            if (roll > 0.85) return 6;
+            if (roll > 0.65) return 4;
+            if (roll > 0.30) return 2;
+            return 1;
         }
-        return Math.floor(Math.random() * 2); // Stable standard accumulation
+        // 2. Powerplay Aggression (Overs 1-6)
+        if (currentOver < 6) {
+            let roll = Math.random();
+            if (roll > 0.90) return 6;
+            if (roll > 0.75) return 4;
+            if (roll > 0.40) return 1;
+            return 0;
+        }
+        // 3. Balanced Middle Overs Acceleration
+        if (wicketsInHand >= 7) {
+            return Math.random() > 0.65 ? 4 : (Math.random() > 0.20 ? 1 : 0);
+        }
+        // 4. Recovery mode if collapsing
+        return Math.random() > 0.85 ? 4 : (Math.random() > 0.40 ? 1 : 0);
     }
 
     function simulateTeamBall() {
@@ -295,7 +326,7 @@
             if(match.totalBalls >= 120 || match.teamWicks >= (career.pos - 1)) break;
             match.totalBalls++;
             match.teamRuns += getSimulatedRuns();
-            if(Math.random() > 0.94) match.teamWicks++;
+            if(Math.random() > 0.95) match.teamWicks++; // Real T20 risk profiles
         }
         checkBattingEntry();
         updateUI();
@@ -303,34 +334,45 @@
     }
 
     function simulateOpponentBall() {
-        let currentOver = Math.floor(match.totalBalls / 6);
-        let wicketsInHand = 10 - match.teamWicks;
-        let runsToAdd = 0;
-
-        // Death Overs run calibration for background simulation blocks
-        if (currentOver >= 15 && wicketsInHand >= 6) {
-            runsToAdd = Math.floor(Math.random() * 14) + 8; // High explosion scoring at the death
-        } else {
-            runsToAdd = Math.floor(Math.random() * 8);
+        if(match.innings === 2 && match.teamRuns >= match.target) {
+            nextInnings();
+            return;
         }
 
-        match.totalBalls += 6; 
-        match.teamRuns += runsToAdd;
-        if(Math.random() > 0.88) match.teamWicks++;
-        addLog("Overs processing. Your teammates are rotating the spell.");
+        let totalRunsThisOver = 0;
+        for(let b=0; b<6; b++) {
+            if(match.totalBalls >= 120 || match.teamWicks >= 10) break;
+            totalRunsThisOver += getSimulatedRuns();
+            match.totalBalls++;
+            if(Math.random() > 0.94) match.teamWicks++;
+        }
+        
+        addLog(`Teammates bowling rotation completed. Over conceded ${totalRunsThisOver} runs.`);
         updateUI();
+        
+        if(match.innings === 2 && match.teamRuns >= match.target) {
+            nextInnings();
+            return;
+        }
         if(match.totalBalls >= 120 || match.teamWicks >= 10) nextInnings();
     }
 
     function simulateOpponentOver() {
         for(let i = 0; i < 6; i++) {
             if(match.totalBalls >= 120 || match.teamWicks >= 10) break;
+            if(match.innings === 2 && match.teamRuns >= match.target) break;
+            
             match.totalBalls++;
             match.teamRuns += getSimulatedRuns();
             if(Math.random() > 0.95) match.teamWicks++;
         }
         addLog(`Teammate finishes their over. Captain calls you back into the spell attack.`);
         updateUI();
+        
+        if(match.innings === 2 && match.teamRuns >= match.target) {
+            nextInnings();
+            return;
+        }
         if(match.totalBalls >= 120 || match.teamWicks >= 10) nextInnings();
     }
 
@@ -346,9 +388,10 @@
 
     function simRest() {
         while(match.totalBalls < 120 && match.teamWicks < 10) {
+            if(match.innings === 2 && match.teamRuns >= match.target) break;
             match.totalBalls++;
-            if(Math.random() > 0.96) match.teamWicks++;
             match.teamRuns += getSimulatedRuns();
+            if(Math.random() > 0.96) match.teamWicks++;
         }
         nextInnings();
     }
@@ -368,7 +411,7 @@
     function endMatch() {
         career.matches++;
         career.runs += match.playerRuns;
-        career.wicks += match.playerWicks;
+        career.wicks += match.playerWicks; // FIXED: Accurately saves wickets to season tally
         
         let win = false;
         if(match.innings === 2) {
@@ -376,7 +419,6 @@
             else win = match.teamRuns < match.target;
         }
 
-        // Properly allocate points to whichever team won this matchup
         let userTeamNameInTable = career.myTeam + " (You)";
         if(win) {
             let userTeamObj = teams.find(t => t.name === userTeamNameInTable);
@@ -432,7 +474,6 @@
         
         career.matches = 0; career.runs = 0; career.wicks = 0;
         
-        // Strip out previous custom tag markers and reset scores for fresh season iteration
         teams.forEach(t => { 
             t.points = 0; t.played = 0; 
             t.name = t.name.replace(" (You)", "");
@@ -489,6 +530,4 @@
 </script>
 </body>
 </html>
-             
-                
-                
+ 
